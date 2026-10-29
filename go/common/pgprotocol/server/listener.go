@@ -75,6 +75,9 @@ type Listener struct {
 	// so call sites in startup.go can invoke methods unconditionally.
 	authMetrics AuthMetricsRecorder
 
+	// serverVersion is the server_version reported to clients at startup.
+	serverVersion string
+
 	// logger for logging.
 	logger *slog.Logger
 
@@ -210,9 +213,18 @@ type ListenerConfig struct {
 	// implementation here.
 	AuthMetrics AuthMetricsRecorder
 
+	// ServerVersion is the server_version reported to clients at startup.
+	// Empty means DefaultServerVersion. Clients such as pg_dump choose their
+	// catalog queries, and refuse newer servers, by this version.
+	ServerVersion string
+
 	// Logger for logging (optional, defaults to slog.Default()).
 	Logger *slog.Logger
 }
+
+// DefaultServerVersion is the server_version reported when
+// ListenerConfig.ServerVersion is empty.
+const DefaultServerVersion = "17.0 (multigres)"
 
 // DefaultAuthenticationTimeout matches PostgreSQL's authentication_timeout
 // default (60s). Used when ListenerConfig.AuthenticationTimeout is zero.
@@ -266,12 +278,16 @@ func NewListener(config ListenerConfig) (*Listener, error) {
 		authMetrics:           authMetrics,
 		logger:                logger,
 		gatewayID:             config.GatewayID,
+		serverVersion:         config.ServerVersion,
 		conns:                 make(map[uint32]*Conn),
 		ctx:                   ctx,
 		cancel:                cancel,
 	}
 
 	// Initialize buffer pools.
+	if l.serverVersion == "" {
+		l.serverVersion = DefaultServerVersion
+	}
 	l.readersPool = &sync.Pool{
 		New: func() any {
 			return bufio.NewReaderSize(nil, connBufferSize)

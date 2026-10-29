@@ -1203,7 +1203,7 @@ func (c *Conn) sendBackendKeyData() error {
 func (c *Conn) sendParameterStatuses() error {
 	// Send standard parameters that clients expect.
 	parameters := map[string]string{
-		"server_version":              "17.0 (multigres)", // Pretend to be PostgreSQL 17
+		"server_version":              c.serverVersion(),
 		"server_encoding":             "UTF8",
 		"client_encoding":             "UTF8",
 		"DateStyle":                   "ISO, MDY",
@@ -1219,6 +1219,14 @@ func (c *Conn) sendParameterStatuses() error {
 	}
 
 	return nil
+}
+
+// serverVersion is the server_version the listener reports.
+func (c *Conn) serverVersion() string {
+	if c.listener == nil || c.listener.serverVersion == "" {
+		return DefaultServerVersion
+	}
+	return c.listener.serverVersion
 }
 
 // sendParameterStatus sends a single ParameterStatus message and records the

@@ -144,6 +144,9 @@ linters:
             # minigres runs the multigateway and the multipooler in one process.
             - "!**/go/cmd/minigres/*.go"
             - "!**/go/cmd/minigres/**/*.go"
+            # hranagres runs the multigateway in front of the Hrana pooler.
+            - "!**/go/cmd/hranagres/*.go"
+            - "!**/go/cmd/hranagres/**/*.go"
             - "**/*.go"
           list-mode: lax
           deny:

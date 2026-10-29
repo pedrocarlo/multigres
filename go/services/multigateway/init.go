@@ -59,6 +59,9 @@ type Multigateway struct {
 	pgPort viperutil.Value[int]
 	// pgBindAddress is the address to bind the PostgreSQL listener to
 	pgBindAddress viperutil.Value[string]
+
+	// serverVersion is the server_version reported to clients at startup.
+	serverVersion viperutil.Value[string]
 	// pgTLSCertFile is the path to the TLS certificate file for PostgreSQL SSL connections.
 	pgTLSCertFile viperutil.Value[string]
 	// pgTLSKeyFile is the path to the TLS private key file for PostgreSQL SSL connections.
@@ -215,6 +218,12 @@ func NewMultigateway(reg *viperutil.Registry, resources servenv.ProcessResources
 			Dynamic:  false,
 			EnvVars:  []string{"MT_PG_BIND_ADDRESS"},
 		}),
+		serverVersion: viperutil.Configure(reg, "server-version", viperutil.Options[string]{
+			Default:  server.DefaultServerVersion,
+			FlagName: "server-version",
+			Dynamic:  false,
+			EnvVars:  []string{"MT_SERVER_VERSION"},
+		}),
 		statementTimeout: viperutil.Configure(reg, "statement-timeout", viperutil.Options[time.Duration]{
 			Default:  30 * time.Second,
 			FlagName: "statement-timeout",
@@ -335,6 +344,7 @@ func (mg *Multigateway) RegisterFlags(fs *pflag.FlagSet) {
 	fs.String("service-id", mg.serviceID.Default(), "optional service ID (if empty, a random ID will be generated)")
 	fs.Int("pg-port", mg.pgPort.Default(), "PostgreSQL protocol listen port")
 	fs.String("pg-bind-address", mg.pgBindAddress.Default(), "address to bind the PostgreSQL listener to")
+	fs.String("server-version", mg.serverVersion.Default(), "server_version reported to clients at startup; clients such as pg_dump choose their catalog queries by it")
 	fs.Duration("statement-timeout", mg.statementTimeout.Default(), "Default statement execution timeout. 0 disables.")
 	fs.Duration("authentication-timeout", mg.authenticationTimeout.Default(), "Maximum time allowed to complete client authentication (SSL handshake, startup message, SCRAM). Negative disables; 0 uses the protocol default of 60s.")
 	fs.String("pg-tls-cert-file", mg.pgTLSCertFile.Default(), "path to TLS certificate file for PostgreSQL SSL connections")
@@ -352,6 +362,7 @@ func (mg *Multigateway) RegisterFlags(fs *pflag.FlagSet) {
 		mg.serviceID,
 		mg.pgPort,
 		mg.pgBindAddress,
+		mg.serverVersion,
 		mg.statementTimeout,
 		mg.authenticationTimeout,
 		mg.pgTLSCertFile,
@@ -562,6 +573,7 @@ func (mg *Multigateway) Init(ctx context.Context, ts topoclient.Store) error {
 		RequireTLS:            requireSSL,
 		AuthenticationTimeout: mg.authenticationTimeout.Get(),
 		AuthMetrics:           gatewayMetrics,
+		ServerVersion:         mg.serverVersion.Get(),
 		Logger:                logger,
 	})
 	if err != nil {
@@ -587,6 +599,7 @@ func (mg *Multigateway) Init(ctx context.Context, ts topoclient.Store) error {
 			RequireTLS:            requireSSL,
 			AuthenticationTimeout: mg.authenticationTimeout.Get(),
 			AuthMetrics:           gatewayMetrics,
+			ServerVersion:         mg.serverVersion.Get(),
 			Logger:                logger,
 		})
 		if err != nil {

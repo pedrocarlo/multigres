@@ -9,6 +9,7 @@
 - **multiadmin** - Administrative service for cluster management
 - **multigres** - CLI tool for cluster management
 - **minigres** - Multigateway and multipooler in one process, for a database served by a single pooler with no replicas (see `docs/general/minigres.md`)
+- **hranagres** - Multigateway in front of one turso-server database, reached over Hrana (SQL over HTTP) instead of PostgreSQL (see `docs/general/hranagres.md`)
 
 ## Data Flow
 
