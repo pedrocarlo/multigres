@@ -73,12 +73,19 @@ none.
 
 ## pg_dump
 
-`pg_dump` runs through the gateway unchanged. How far it gets depends on the
-PostgreSQL emulation of the turso version turso-server is built with (its
-catalog, `pg_get_*def` functions and SQL coverage), not on Hrana. With turso
-`2ab8e5e3` it gets through the connection setup, the transaction, `LOCK TABLE`
-and most catalog queries, and stops at the index query
-(`array_agg(... ORDER BY ...)` is not supported there). turso-server also needs
-a larger SQL stack than its 65 KiB default for some `pg_dump` queries
-(`TURSOD_SQLITE_SUSPEND_EXECUTION_STACK_SIZE`), or the whole server aborts on a
-stack overflow.
+`pg_dump` runs through the gateway unchanged. How much of the schema it
+reproduces depends on the PostgreSQL emulation of the turso version
+turso-server is built with (its catalog, `pg_get_*def` functions and SQL
+coverage), not on Hrana.
+
+- With turso `2ab8e5e3` it stops at the index query
+  (`array_agg(... ORDER BY ...)` is not supported there).
+- With turso `6d8f8b18` (turso-server on that version, see the turso-server
+  branch `claude/sharp-pasteur-lb51tk`) it completes: tables, data, primary
+  keys, unique constraints and indexes. Foreign keys are missing from the dump,
+  `varchar(n)` loses its length and `DEFAULT false` reads
+  `DEFAULT CAST (0 AS boolean)`; these come from turso's catalog.
+
+turso-server needs a larger SQL stack than its 65 KiB default for some
+`pg_dump` queries (`TURSOD_SQLITE_SUSPEND_EXECUTION_STACK_SIZE`; 144 KiB is
+enough so far), or the whole server aborts on a stack overflow.
